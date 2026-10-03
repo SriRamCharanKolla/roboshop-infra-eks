@@ -1,0 +1,60 @@
+data "http" "my_public_ip_v4" {
+  url = "https://ipv4.icanhazip.com"
+}
+
+output "my_ipv4_address" {
+  value = chomp(data.http.my_public_ip_v4.response_body)
+}
+
+data "aws_ssm_parameter" "bastion_sg_id" {
+    name = "/${var.project}/${var.environment}/bastion_sg_id"
+}
+
+data "aws_ssm_parameter" "mongodb_sg_id" {
+    name = "/${var.project}/${var.environment}/mongodb_sg_id"
+}
+
+data "aws_ssm_parameter" "redis_sg_id" {
+    name = "/${var.project}/${var.environment}/redis_sg_id"
+}
+
+data "aws_ssm_parameter" "mysql_sg_id" {
+    name = "/${var.project}/${var.environment}/mysql_sg_id"
+}
+
+data "aws_ssm_parameter" "rabbitmq_sg_id" {
+    name = "/${var.project}/${var.environment}/rabbitmq_sg_id"
+}
+
+
+data "aws_ssm_parameter" "ingress_alb_sg_id" {
+    name = "/${var.project}/${var.environment}/ingress_alb_sg_id"
+}
+
+data "aws_ssm_parameter" "eks_control_plane_sg_id" {
+    name = "/${var.project}/${var.environment}/eks_control_plane_sg_id"
+}
+
+data "aws_ssm_parameter" "eks_node_sg_id" {
+    name = "/${var.project}/${var.environment}/eks_node_sg_id"
+}
+
+data "aws_ssm_parameter" "openvpn_sg_id" {
+    name = "/${var.project}/${var.environment}/openvpn_sg_id"
+}
+
+data "aws_ssm_parameter" "jenkins_sg_id" {
+    name = "/${var.project}/${var.environment}/jenkins_sg_id"
+}
+
+data "aws_ssm_parameter" "jenkins_agent_sg_id" {
+    name = "/${var.project}/${var.environment}/jenkins_agent_sg_id"
+}
+
+data "aws_ssm_parameter" "sonar_sg_id" {
+    name = "/${var.project}/${var.environment}/sonar_sg_id"
+}
+
+data "aws_ssm_parameter" "runner_sg_id" {
+    name = "/${var.project}/${var.environment}/runner_sg_id"
+}

@@ -1,0 +1,6 @@
+configMap:
+  MONGO_URL: "mongodb://mongodb:27017/catalogue"
+deployment:
+  replicas: "1"
+  imageName: "joindevops/catalogue"
+  imageVersion: "1.4.0"
