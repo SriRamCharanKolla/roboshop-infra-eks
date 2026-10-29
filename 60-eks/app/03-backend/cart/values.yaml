@@ -1,6 +1,8 @@
+configMap:
+  REDIS_HOST: "redis"
+  CATALOGUE_HOST: "catalogue"
+  CATALOGUE_PORT: "8080"
 deployment:
   replicas: "1"
-  imageName: "joindevops/frontend"
+  imageName: "joindevops/cart"
   imageVersion: "1.4.0"
-ingress:
-  host: "roboshop-dev.aitechapp.fun"

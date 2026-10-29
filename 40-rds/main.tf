@@ -27,8 +27,15 @@ module "db" {
   # DB option group
   major_engine_version = "8.0"
 
-  # Database Deletion Protection
+  # Database Deletion Protection & Snapshot Governance:
+  # In Dev/Sandbox: Set `deletion_protection = false` and `skip_final_snapshot = true`
+  # to allow rapid teardowns and prevent AWS naming collision errors (`DBSnapshotAlreadyExists`).
+  # In Production: Set `deletion_protection = true` and `skip_final_snapshot = false`
+  # with a dynamic timestamped identifier:
+  # `final_snapshot_identifier = "${var.project}-${var.environment}-final-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"`
   deletion_protection = false
+  skip_final_snapshot = true
+
 
   parameters = [
     {

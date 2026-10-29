@@ -8,5 +8,5 @@ configMap:
   AMQP_PASS: roboshop123
 deployment:
   replicas: "1"
-  imageName: "joindevops/payment"
+  imageName: "joindevops/payment" # ramcharankola2
   imageVersion: "1.4.0"

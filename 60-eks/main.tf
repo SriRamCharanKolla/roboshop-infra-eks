@@ -11,15 +11,16 @@ module "eks" {
   node_security_group_ids    = [local.eks_node_sg_id]
 
   eks_managed_node_groups = {
+
     blue = {
       create             = var.enable_blue
       kubernetes_version = var.eks_nodegroup_blue_version
       instance_types     = ["c3.large", "c4.large", "c5.large", "c5d.large", "c5n.large", "c5a.large"]
-      capacity_type  = "SPOT"
-      min_size       = 2
-      max_size       = 10
-      desired_size   = 2
-      labels         = { nodegroup = "blue" }
+      capacity_type      = "SPOT"
+      min_size           = 2
+      max_size           = 10
+      desired_size       = 2
+      labels             = { nodegroup = "blue" }
       iam_role_additional_policies = {
         amazonEBS = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
         amazonEFS = "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"

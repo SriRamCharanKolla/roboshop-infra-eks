@@ -6,4 +6,4 @@ metadata:
 spec:
   containers:
   - name: debug
-    image: joindevops/debug:1.4.0
+    image: joindevops/debug:1.4.0 # ramcharankola2

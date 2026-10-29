@@ -4,3 +4,4 @@ deployment:
   imageVersion: "1.4.0"
 ingress:
   host: "roboshop-dev.aitechapp.fun"
+  certificateArn: "arn:aws:acm:us-east-1:069416262340:certificate/e09fdd96-80c6-4814-a235-89c17501f08f"

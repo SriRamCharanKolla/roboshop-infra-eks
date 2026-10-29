@@ -16,8 +16,6 @@ variable "sg_names" {
         "bastion",
         # Openvpn
         "openvpn",
-        "eks_control_plane","eks_node",
-        "jenkins","jenkins_agent",
-        "sonar","runner"
+        "eks_control_plane","eks_node"
     ]
 }

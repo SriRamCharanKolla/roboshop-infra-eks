@@ -1,15 +1,15 @@
 variable "project" {
-    default = "roboshop"
+  default = "roboshop"
 }
 
 variable "environment" {
-    default = "dev"
+  default = "dev"
 }
 
 variable "zone_id" {
-    default = "Z04311461UOYT2X1S4LOM"
+  default = "Z082192717Y56TLJLLOXS"
 }
 
 variable "domain_name" {
-    default = "daws88s.online"
+  default = "aitechapp.fun"
 }

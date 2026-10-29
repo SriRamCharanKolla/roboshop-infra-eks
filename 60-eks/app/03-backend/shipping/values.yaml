@@ -1,7 +1,7 @@
 configMap:
-  REDIS_URL: "redis://redis:6379"
-  MONGO_URL: "mongodb://mongodb:27017/catalogue"
+  CART_ENDPOINT: "cart:8080"
+  DB_HOST: "roboshop-dev.cynecysg8pjs.us-east-1.rds.amazonaws.com"
 deployment:
   replicas: "1"
-  imageName: "joindevops/user"
+  imageName: "joindevops/shipping"
   imageVersion: "1.4.0"
