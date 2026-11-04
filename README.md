@@ -339,6 +339,127 @@ terraform apply \
 
 ---
 
+## 7. Enterprise CI/CD & DevSecOps Platform Infrastructure (`31-cicd-tools`)
+
+In this project, infrastructure automation is not limited to Kubernetes clusters; we provisioned and operated the entire **Enterprise CI/CD and DevSecOps Tooling Infrastructure** on AWS using Terraform module [`31-cicd-tools`](file:///Users/sriramcharankolla/Desktop/DevOps/roboshop-infra-eks/31-cicd-tools/main.tf).
+
+This platform enforces **Shift-Left Security**, automated static code analysis, supply-chain vulnerability inspection, container hardening, container vulnerability scanning, and continuous delivery to Amazon EKS.
+
+### 🔄 End-to-End DevSecOps Delivery Architecture
+
+```mermaid
+flowchart TD
+    Dev["Developer Git Commit"] --> SCM["GitHub Enterprise / Repo"]
+    SCM --> Jenkins["Jenkins Controller\n(jenkins.aitechapp.fun)"]
+    Jenkins --> Agent["Jenkins Build Agent\n(RHEL 9 / t3.micro on AWS)"]
+    
+    subgraph DevSecOps ["🛡️ Automated Shift-Left DevSecOps Pipeline"]
+        Agent --> UnitTests["Jest Unit Testing\n(npm test -> coverage/lcov.info)"]
+        UnitTests --> SonarScan["SonarQube SAST Scanner\n(sonar.aitechapp.fun)"]
+        SonarScan --> QualityGate{"Quality Gate Handshake\n(SonarQube Webhook)"}
+        QualityGate -->|Failed| FailBuild["Pipeline Blocked / Build Aborted"]
+        QualityGate -->|Passed| Dependabot["GitHub Dependabot API Check\n(Block on HIGH/CRITICAL Vulns)"]
+        Dependabot -->|Alerts Found| FailBuild
+        Dependabot -->|Clean| DockerBuild["Hardened Docker Multi-Stage Build\n(Alpine 3.23, Non-Root, --no-cache)"]
+        DockerBuild --> ECRPush["Push to AWS ECR\n(roboshop/catalogue)"]
+        ECRPush --> TrivyScan{"Aqua Trivy Container Scan\n(OS & Library CVE Check)"}
+        TrivyScan -->|CVEs Found| FailBuild
+        TrivyScan -->|Passed| HelmDeploy["Helm Upgrade / Continuous Deployment"]
+    end
+
+    HelmDeploy --> EKS["Amazon EKS Cluster v1.35\n(roboshop namespace)"]
+    FailBuild --> Cleanup["Post Actions: cleanWs()\n(Deferred Workspace Wipeout)"]
+    HelmDeploy --> Cleanup
+```
+
+### 🏢 Enterprise CI/CD Practices Demonstrated
+
+| Practice | Enterprise Standard | Project Implementation |
+| :--- | :--- | :--- |
+| **Infrastructure as Code for Tooling** | All CI/CD infrastructure defined in code, version-controlled, and reproducible. | Provisioned Jenkins Master, Jenkins Agent, SonarQube Server (`Ubuntu 24.04`), and GitHub Runners via Terraform [`31-cicd-tools`](file:///Users/sriramcharankolla/Desktop/DevOps/roboshop-infra-eks/31-cicd-tools/main.tf) with decoupled Security Groups. |
+| **Static Application Security Testing (SAST)** | Static code inspection for security vulnerabilities, bugs, and technical debt before compilation. | Dedicated SonarQube Server (`t3.large`, 50GB GP3 EBS) integrated with `sonar-scanner` and `withSonarQubeEnv` wrapper. |
+| **Asynchronous Quality Gates** | Zero polling; event-driven asynchronous callbacks from quality scanners. | Bidirectional SonarQube Webhook (`/sonarqube-webhook/`) pausing Jenkins builds at `waitForQualityGate` and gating deployments. |
+| **Software Supply Chain Security** | Proactively identify vulnerable upstream dependencies before packaging containers. | Automated GitHub Dependabot Alerts REST API stage with Fine-Grained Personal Access Tokens, blocking builds on unresolved CVEs. |
+| **Container Hardening & Least Privilege** | Avoid running containers as root; minimize attack surface and image size. | Multi-stage Docker builds using lightweight Alpine Linux 3.23, dedicated unprivileged `roboshop` system user, and `--no-cache` package updates. |
+| **Container Vulnerability Scanning** | Verify final container images against known CVE databases prior to Kubernetes scheduling. | Aqua Security Trivy CLI scanner integrated into pipelines, checking both OS packages (`apk`) and Application dependencies (`npm`). |
+| **Agent Storage & Hygiene Management** | Prevent disk saturation and credential leakage across multi-tenant build nodes. | Automated `post { always { cleanWs() } }` execution, completely removing workspace files, `node_modules`, and reports after each build. |
+
+---
+
+### 📸 CI/CD & DevSecOps Proof-of-Work Gallery
+
+#### 17. SonarQube Dedicated Server Provisioning via Terraform
+SSH connection to the dedicated SonarQube EC2 instance (`18.232.146.73`) provisioned by Terraform [`31-cicd-tools/main.tf`](file:///Users/sriramcharankolla/Desktop/DevOps/roboshop-infra-eks/31-cicd-tools/main.tf#L83-L101) with 50GB GP3 EBS volume and `linux-practice` key pair.
+![SonarQube Server Provisioning](images/cicd/17-sonarqube-ec2-instance-provisioning.png)
+
+---
+
+#### 18. SonarQube Web Portal & Security Initial Setup
+Accessing the SonarQube Community server console at `sonar.aitechapp.fun` to configure security policies and admin credentials.
+![SonarQube Web Console](images/cicd/18-sonarqube-server-web-console.png)
+
+---
+
+#### 19. Jenkins Plugin & Tool Integration
+Installing official **SonarQube Scanner** and pipeline utility plugins inside Jenkins (`jenkins.aitechapp.fun`) to support automated scanner tool installations on distributed agents.
+![Jenkins Plugins Setup](images/cicd/19-jenkins-plugins-and-tools-setup.png)
+
+---
+
+#### 20. SonarQube SAST Code Analysis Dashboard
+SonarQube dashboard for the `roboshop-catalogue` microservice displaying zero open vulnerabilities, low technical debt, and zero reliability bugs.
+![SonarQube SAST Dashboard](images/cicd/20-sonarqube-sast-project-dashboard.png)
+
+---
+
+#### 21. Bidirectional SonarQube Webhook to Jenkins
+Configuring event-driven webhook callback from SonarQube (`Administration / Webhooks`) targeting `http://jenkins.aitechapp.fun:8080/sonarqube-webhook/` for instant Quality Gate notifications.
+![SonarQube Webhook Setup](images/cicd/21-sonarqube-webhook-to-jenkins.png)
+
+---
+
+#### 22. Automated Jest Unit Tests & Code Coverage
+Jenkins pipeline executing Jest unit tests (`GET /products returns 500 on db error (4 ms)`) and generating LCOV coverage metrics (`coverage/lcov.info`) ingested by SonarQube.
+![Jest Unit Tests Execution](images/cicd/22-jest-unit-tests-and-coverage-stage.png)
+
+---
+
+#### 23. Jenkins Pipeline Quality Gate Enforcement
+Jenkins pipeline successfully validating the SonarQube Quality Gate via `waitForQualityGate abortPipeline: true`, allowing only verified code to proceed to containerization.
+![Jenkins Quality Gate Passing](images/cicd/23-jenkins-pipeline-quality-gate-passing.png)
+
+---
+
+#### 24. GitHub Fine-Grained Token & Dependabot API Security
+Setting up Fine-Grained Personal Access Tokens in GitHub Developer Settings with `Dependabot alerts: Read-only` permissions for supply-chain vulnerability inspection.
+![GitHub Token Setup](images/cicd/24-github-token-dependabot-api-auth.png)
+
+---
+
+#### 25. Amazon ECR Private Container Registry
+Amazon Elastic Container Registry repository console for `roboshop/catalogue` (Account `069416262340` in `us-east-1`), storing versioned container artifacts for the EKS cluster.
+![AWS ECR Repository](images/cicd/25-aws-ecr-container-registry-repo.png)
+
+---
+
+#### 26. Trivy Security Scanner Installation on Build Agent
+SSH terminal session on the Jenkins build agent (`44.199.241.39 / 10.0.1.44`) running Aqua Security Trivy CLI `v0.74.0` installation script into `/usr/local/bin/trivy`.
+![Trivy CLI Setup](images/cicd/26-jenkins-agent-trivy-scanner-setup.png)
+
+---
+
+#### 27. Container Image Vulnerability & CVE Detection
+Trivy CLI inspecting container images and detecting CVEs (e.g., `CVE-2026-59871`, `CVE-2026-59875` in `node-tar`), outputting structured severity and remediation guidance.
+![Trivy CVE Scanning](images/cicd/27-trivy-container-image-cve-scan.png)
+
+---
+
+#### 28. End-to-End DevSecOps Pipeline Execution & Cleanup
+Jenkins console log demonstrating full pipeline completion: Versioning ➔ Dependencies ➔ Dependabot Security ➔ Docker Build ➔ ECR Push ➔ Trivy OS & Library Scan ➔ Automated `cleanWs` workspace wipeout.
+![Jenkins DevSecOps Complete](images/cicd/28-jenkins-devsecops-pipeline-complete.png)
+
+---
+
 ## Infrastructure Teardown & Destroy Playbook
 
 > [!CAUTION]

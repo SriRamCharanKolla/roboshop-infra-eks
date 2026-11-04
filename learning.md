@@ -1729,3 +1729,62 @@ terraform destroy -auto-approve
 - **Resolution**: To prevent this, teardown pipelines must enforce a Kubernetes pre-destroy phase (uninstalling Ingress/TGB and controllers first), or query AWS CLI to remove lingering controller-created security groups before destroying the underlying VPC.
 
 
+
+---
+
+## 9. Cross-Stack Dependency & AWS SSM Parameter Store Decoupling (`10-sg` vs `20-sg-rules`)
+
+### Problem Symptom
+When applying security group rules in `20-sg-rules`, Terraform failed during the refresh phase with:
+```text
+Error: reading SSM Parameter (/roboshop/dev/jenkins_sg_id): couldn't find resource
+Error: reading SSM Parameter (/roboshop/dev/jenkins_agent_sg_id): couldn't find resource
+Error: reading SSM Parameter (/roboshop/dev/sonar_sg_id): couldn't find resource
+Error: reading SSM Parameter (/roboshop/dev/runner_sg_id): couldn't find resource
+```
+
+### End-to-End Dependency Flow & Root Cause
+In this modular architecture, security group IDs are decoupled via **AWS Systems Manager (SSM) Parameter Store**:
+1. Module **`10-sg`** is responsible for creating Security Groups (`module.sg`) and writing their IDs to SSM Parameter Store (`aws_ssm_parameter.sg_id`) based on `var.sg_names`.
+2. Module **`20-sg-rules`** queries those parameters via `data "aws_ssm_parameter"` to attach ingress and egress rules without coupling Terraform state files.
+3. In [`10-sg/variables.tf`](file:///Users/sriramcharankolla/Desktop/DevOps/roboshop-infra-eks/10-sg/variables.tf#L9-L21), `var.sg_names` only contained database and cluster names (`mongodb`, `redis`, `mysql`, `rabbitmq`, `eks_control_plane`, `eks_node`), omitting `"jenkins"`, `"jenkins_agent"`, `"sonar"`, and `"runner"`.
+4. Because the Security Groups were never provisioned by `10-sg`, their SSM parameter paths did not exist in AWS. `20-sg-rules` crashed on refresh when resolving non-existent parameters.
+
+### Remediation
+1. Update `var.sg_names` in [`10-sg/variables.tf`](file:///Users/sriramcharankolla/Desktop/DevOps/roboshop-infra-eks/10-sg/variables.tf#L9-L23) to include `"jenkins"`, `"jenkins_agent"`, `"sonar"`, `"runner"`.
+2. Run `terraform apply -auto-approve` inside `10-sg` to create the SGs and write the parameters.
+3. Run `terraform apply -auto-approve` inside `20-sg-rules` to successfully attach security group rules.
+
+---
+
+## 10. AWS EC2 RunInstances: EBS Volume Size vs AMI Snapshot Constraint
+
+### Problem Symptom
+When provisioning the SonarQube EC2 instance in `31-cicd-tools/main.tf`:
+```text
+Error: creating EC2 Instance: operation error EC2: RunInstances, https response error StatusCode: 400, RequestID: ..., api error InvalidBlockDeviceMapping: Volume of size 20GB is smaller than snapshot 'snap-0c331c386ae266ffe', expect size >= 50GB
+  with aws_instance.sonarqube[0],
+  on main.tf line 83, in resource "aws_instance" "sonarqube":
+```
+
+### Technical Explanation
+- An Amazon Machine Image (AMI) is backed by an Amazon EBS snapshot containing the pre-installed operating system, runtime libraries, and configurations.
+- The `SolveDevOps-SonarQube-Server-Ubuntu24.04-*` AMI snapshot (`snap-0c331c386ae266ffe`) has an intrinsic snapshot size of **50GB**.
+- **AWS EBS Architecture Rule**: During instance launch (`RunInstances`), an EBS root volume **can be expanded** to a larger capacity (e.g., 50GB, 100GB, 200GB), but AWS **strictly prohibits shrinking an EBS volume below the size of its source snapshot**.
+- In [`31-cicd-tools/main.tf`](file:///Users/sriramcharankolla/Desktop/DevOps/roboshop-infra-eks/31-cicd-tools/main.tf#L91-L94), the block was specified as:
+  ```hcl
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
+  ```
+- Because `20GB < 50GB`, AWS EC2 rejected the API request with HTTP 400 `InvalidBlockDeviceMapping`.
+
+### Remediation
+Increase `volume_size` to match or exceed the snapshot size:
+```hcl
+root_block_device {
+  volume_size = 50
+  volume_type = "gp3"
+}
+```

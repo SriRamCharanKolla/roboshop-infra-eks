@@ -1,27 +1,27 @@
 variable "project" {
-    default = "roboshop"
+  default = "roboshop"
 }
 
 variable "environment" {
-    default = "dev"
+  default = "dev"
 }
 
 variable "zone_id" {
-    default = "Z082192717Y56TLJLLOXS"
+  default = "Z082192717Y56TLJLLOXS"
 }
 
 variable "domain_name" {
-    default = "aitechapp.fun"
+  default = "aitechapp.fun"
 }
 
 variable "sonar" {
-    default = true
+  default = false # If SonarQube server configuration required for Practice then should be true else false
 }
 
 variable "jenkins" {
-    default = true
+  default = true # If Jenkins server configuration required for Practice then should be true else false
 }
 
 variable "runner" {
-    default = false
+  default = false # If Git Runner server configuration required for Practice then should be true else false
 }
